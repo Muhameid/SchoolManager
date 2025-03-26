@@ -128,16 +128,17 @@
         <div class="tab-pane fade show active" id="students-associated" role="tabpanel" aria-labelledby="students-associated-tab">
             <h4 class="text-center text-dark mb-4">Élèves inscrits à cet examen</h4>
     
-            <form method="POST" action="{{ route('retirer_examen_eleve') }}">             
-                   @csrf
+            <form method="POST" action="{{ route('retirer_examen_eleve') }}">
+                @csrf
                 <input type="hidden" name="examen_id" value="{{ $examen->id }}">
-    
+            
+                {{-- Affichage des classes normales --}}
+                <h4>Classes normales</h4>
                 @foreach($professeur->classes as $classe)
                     @php
-                        // Filtrer les élèves de cette classe qui sont inscrits à l'examen
                         $eleves_inscrits = $examen->eleves->where('classe_id', $classe->id);
                     @endphp
-    
+            
                     @if($eleves_inscrits->count() > 0)
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="classe_{{$classe->id}}" name="classes[]" value="{{$classe->id}}" onchange="toggleEleves('classe_{{$classe->id}}', 'eleves_classe_{{$classe->id}}')">
@@ -145,19 +146,15 @@
                                 #{{$classe->id}} {{$classe->nom}} - Filière : {{$classe->filiere->nom}}
                             </label>
                         </div>
-    
+            
                         <div class="eleves-list ms-3" id="eleves_classe_{{$classe->id}}">
                             <table class="table table-sm table-bordered">
                                 <thead>
                                     <tr>
                                         <th>Sélectionner</th>
-                                       
                                         <th>INE</th>
                                         <th>Prénom</th>
                                         <th>Nom</th>
-                                        
-                                       
-                                     
                                         <th>Note</th>
                                         <th>Fiche</th>
                                     </tr>
@@ -166,18 +163,11 @@
                                     @foreach($eleves_inscrits as $e)
                                         <tr>
                                             <td>
-                                                <input class="form-check-input" type="checkbox" name="eleves[]" value="{{$e->id}}" 
-                                                    @if($examen->eleves->contains($e->id)) unchecked @endif
-                                                    onchange="checkClasse('classe_{{$classe->id}}', 'eleves_classe_{{$classe->id}}')" 
-                                                    @if($examen->eleves->contains($e->id))  @endif>
+                                                <input class="form-check-input" type="checkbox" name="eleves[]" value="{{$e->id}}">
                                             </td>
-                                           
                                             <td>{{$e->ine}}</td>
                                             <td>{{$e->user->prenom}}</td>
                                             <td>{{$e->user->nom}}</td>
-                                           
-                                           
-                                           
                                             <td>{{$e->pivot->note ?? 'Pas de note'}}</td>
                                             <td>
                                                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#ficheEleveModal{{$e->id}}">
@@ -185,60 +175,75 @@
                                                 </button>
                                             </td>
                                         </tr>
-    
-                                        <!-- Modal (exemple pour fiche élève) -->
-                                        <div class="modal fade" id="ficheEleveModal{{$e->id}}" tabindex="-1" aria-labelledby="ficheEleveModalLabel{{$e->id}}" aria-hidden="true">
-                                            <div class="modal-dialog">
-                                                <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title" id="ficheEleveModalLabel{{$e->id}}">Fiche de l'élève {{$e->user->prenom}} {{$e->user->nom}}</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                        
-                                                        <!-- Contenu de la fiche élève -->
-                                                        <p>INE: {{$e->ine}}</p>
-                                                        <p>Date de naissance: {{ \Carbon\Carbon::parse($e->user->date_naissance)->format('d-m-Y à H:i:s') }}</p>
-
-                                                        <p>Classe: {{$classe->nom}}</p>
-                                                        <p>Filière: {{$classe->filiere->nom}}</p>
-
-                                                        @if(isset($e->examens) && $e->examens->count() > 0)
-                                                        @foreach($e->examens as $examen)
-                                                          
-                                                                <p class="bg-light">Examen: #{{$examen->id}}  {{$examen->name}} ({{$examen->matiere->nom}})</p>
-                                                              
-                                                            
-                                                            <p>Date {{ \Carbon\Carbon::parse($examen->date_examen)->format('d-m-Y à H:i') }}</p>
-                                                                <p class="bg-light">Note:  {{$examen->pivot->note ?? 'Pas encore de note'}}</p>
-                                                                
-                                                            
-                                                        @endforeach
-                                                    @else
-                                                        <p>
-                                                            <td colspan="2" class="text-muted text-center">Aucun examen inscrit</td>
-                                                        </p>
-                                                    @endif
-                                                        
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <!-- Fin du modal -->
                                     @endforeach
                                 </tbody>
                             </table>
                         </div>
                     @endif
                 @endforeach
+            
+                {{-- Affichage des classes optionnelles --}}
+                <h4>Classes Options</h4>
+                @dd($professeur->classeOptions);
+                @foreach($professeur->classeOptions as $p)
+                 
+                    @php
+                        $eleves_option = $examen->eleves->where('pivot.classe_option_id', $p->id);
+                        
+                    @endphp
+            
+                    @if($eleves_option->count() > 0)
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="option_{{$professeur->s->id}}" name="options[]" value="{{$professeur->classeOptions->id}}" onchange="toggleEleves('option_{{$professeur->classeOptions->id}}', 'eleves_option_{{$professeur->classeOptions->id}}')">
+                            <label class="form-check-label fw-bold" for="option_{{$professeur->classeOptions->id}}">
+                                Option : {{$professeur->classeOptions->nom}}
+                            </label>
+                        </div>
+            
+                        <div class="eleves-list ms-3" id="eleves_option_{{$professeur->classeOptions->id}}">
+                            <table class="table table-sm table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Sélectionner</th>
+                                        <th>INE</th>
+                                        <th>Prénom</th>
+                                        <th>Nom</th>
+                                        <th>Note</th>
+                                        <th>Fiche</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($eleves_option as $e)
+                                        <tr>
+                                            <td>
+                                                <input class="form-check-input" type="checkbox" name="eleves_option[]" value="{{$e->id}}">
+                                            </td>
+                                            <td>{{$e->ine}}</td>
+                                            <td>{{$e->user->prenom}}</td>
+                                            <td>{{$e->user->nom}}</td>
+                                            <td>{{$e->pivot->note ?? 'Pas de note'}}</td>
+                                            <td>
+                                                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#ficheEleveModal{{$e->id}}">
+                                                    Voir
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
                 
-    
+                @endforeach
+
+            
                 <div class="text-center mt-4">
                     <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Êtes-vous sûr de vouloir retirer ces élèves ?');">
                         Retirer
                     </button>
                 </div>
             </form>
+            
         </div>
     </div>
     
